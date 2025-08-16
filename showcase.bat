@@ -1,0 +1,2 @@
+python startbot.py
+pause
