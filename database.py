@@ -85,6 +85,20 @@ class DatabaseManager:
         async with aiosqlite.connect(DB_FILE) as db:
             await db.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
             await db.commit()
+
+    async def notification_exists(self, guild_id: int, airport: str, channel_id: int, role_id: Optional[int]) -> bool:
+        """Checks if an identical notification rule already exists."""
+        async with aiosqlite.connect(DB_FILE) as db:
+            query = "SELECT 1 FROM notifications WHERE guild_id = ? AND airport_icao = ? AND channel_id = ? AND "
+            params = [guild_id, airport.upper(), channel_id]
+            if role_id is None:
+                query += "role_id IS NULL"
+            else:
+                query += "role_id = ?"
+                params.append(role_id)
+
+            async with db.execute(query, tuple(params)) as cursor:
+                return await cursor.fetchone() is not None
     
     # --- Active Notification Methods (for message deletion) ---
     async def add_active_notification(self, rule_id: int, message_id: int, channel_id: int, callsign: str):
