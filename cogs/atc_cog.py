@@ -303,9 +303,10 @@ class AtcCog(commands.Cog):
 
     @atcnotify.command(name="list", description="List all active ATC notifications for this server.")
     async def list(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
         notifications = await self.db_manager.get_notifications_by_guild(interaction.guild_id)
         if not notifications:
-            await interaction.response.send_message("There are no active notifications for this server.", ephemeral=True)
+            await interaction.followup.send("There are no active notifications for this server.", ephemeral=True)
             return
         embed = discord.Embed(title=f"Active Notifications for {interaction.guild.name}", color=discord.Color.og_blurple())
         description = ""
@@ -319,7 +320,7 @@ class AtcCog(commands.Cog):
 
             description += f"• **{notif[1]}** -> {channel_text} ({ping_text})\n"
         embed.description = description
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
     @atcnotify.command(name="remove", description="Remove an active ATC notification.")
     @app_commands.check(check_manager_permissions)
