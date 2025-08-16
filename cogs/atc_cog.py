@@ -286,20 +286,32 @@ class AtcCog(commands.Cog):
     )
     @app_commands.check(check_manager_permissions)
     async def add(self, interaction: discord.Interaction, identifier: str, channel: discord.TextChannel, role: Optional[discord.Role] = None, delete_message: bool = False):
+        # Defer the interaction immediately.
+        await interaction.response.defer()
+
         if len(identifier) < 3 or len(identifier) > 4:
-            await interaction.response.send_message("The identifier must be 3 or 4 letters long.", ephemeral=True)
+            await interaction.followup.send("The identifier must be 3 or 4 letters long.", ephemeral=True)
             return
         
         role_id = role.id if role else None
-        await self.db_manager.add_notification(interaction.guild_id, identifier.upper(), channel.id, role_id, delete_message)
+        identifier_upper = identifier.upper()
+
+        # Check if this exact notification already exists to prevent duplicates.
+        exists = await self.db_manager.notification_exists(interaction.guild_id, identifier_upper, channel.id, role_id)
+        if exists:
+            await interaction.followup.send(f"This exact notification for **{identifier_upper}** already exists in {channel.mention}.")
+            return
+
+        # If it doesn't exist, add it to the database.
+        await self.db_manager.add_notification(interaction.guild_id, identifier_upper, channel.id, role_id, delete_message)
 
         ping_text = f"and ping {role.mention} " if role else ""
-        response_text = f"✅ Success! I will now notify in {channel.mention} {ping_text}when ATC for **{identifier.upper()}** comes online."
-        
+        response_text = f"✅ Success! I will now notify in {channel.mention} {ping_text}when ATC for **{identifier_upper}** comes online."
+
         if delete_message:
             response_text += "\n*The notification message will be deleted when the controller goes offline.*"
 
-        await interaction.response.send_message(response_text)
+        await interaction.followup.send(response_text)
 
     @atcnotify.command(name="list", description="List all active ATC notifications for this server.")
     async def list(self, interaction: discord.Interaction):
